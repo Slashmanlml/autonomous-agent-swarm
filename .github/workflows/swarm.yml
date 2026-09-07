@@ -1,0 +1,44 @@
+﻿name: Autonomous Multi-Agent Swarm CI/CD
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  run-swarm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: 2. Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 3. Ejecutar Enjambre Multi-Agente
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node index.js
+
+      - name: 4. Subir Reporte Generado como Artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-multi-agente
+          path: data/reports/*.md
+          retention-days: 14
+
+      - name: 5. Auto-Commit de Informes Históricos
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/reports/
+          git diff --staged --quiet || (git commit -m "docs(reports): nuevo informe generado por enjambre [skip ci]" && git push)
